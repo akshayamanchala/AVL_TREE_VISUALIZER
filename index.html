@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AVL Tree Visualizer</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 30px auto;
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+    }
+
+    h1 {
+      color: #90caf9;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: 120px;
+      margin-right: 10px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+    }
+
+    button:hover {
+      background-color: #388e3c;
+    }
+
+    #search-result {
+      margin-top: 15px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    svg {
+      width: 100%;
+      height: 500px;
+      margin-top: 20px;
+      border: 1px solid #333;
+      background-color: #2c2c2c;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AVL Tree Visualizer</h1>
+    <div class="controls">
+      <input type="number" id="value-input" placeholder="Enter value" />
+      <button onclick="insertNode()">Insert</button>
+      <button onclick="deleteNode()">Delete</button>
+      <button onclick="searchNode()">Search</button>
+    </div>
+    <div id="search-result"></div>
+    <svg id="tree-container"></svg>
+  </div>
+
+  <script>
+    class AVLTree {
+      constructor() {
+        this.root = null;
+      }
+
+      Node(value) {
+        return { value, left: null, right: null, height: 1 };
+      }
+
+      getHeight(node) {
+        return node ? node.height : 0;
+      }
+
+      getBalance(node) {
+        return node ? this.getHeight(node.left) - this.getHeight(node.right) : 0;
+      }
+
+      rotateRight(y) {
+        const x = y.left;
+        const T2 = x.right;
+        x.right = y;
+        y.left = T2;
+        y.height = Math.max(this.getHeight(y.left), this.getHeight(y.right)) + 1;
+        x.height = Math.max(this.getHeight(x.left), this.getHeight(x.right)) + 1;
+        return x;
+      }
+
+      rotateLeft(x) {
+        const y = x.right;
+        const T2 = y.left;
+        y.left = x;
+        x.right = T2;
+        x.height = Math.max(this.getHeight(x.left), this.getHeight(x.right)) + 1;
+        y.height = Math.max(this.getHeight(y.left), this.getHeight(y.right)) + 1;
+        return y;
+      }
+
+      insert(node, value) {
+        if (!node) return this.Node(value);
+
+        if (value < node.value) {
+          node.left = this.insert(node.left, value);
+        } else if (value > node.value) {
+          node.right = this.insert(node.right, value);
+        } else {
+          return node;
+        }
+
+        node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+        const balance = this.getBalance(node);
+
+        if (balance > 1 && value < node.left.value) return this.rotateRight(node);
+        if (balance < -1 && value > node.right.value) return this.rotateLeft(node);
+        if (balance > 1 && value > node.left.value) {
+          node.left = this.rotateLeft(node.left);
+          return this.rotateRight(node);
+        }
+        if (balance < -1 && value < node.right.value) {
+          node.right = this.rotateRight(node.right);
+          return this.rotateLeft(node);
+        }
+
+        return node;
+      }
+
+      minValueNode(node) {
+        let current = node;
+        while (current.left) current = current.left;
+        return current;
+      }
+
+      delete(node, value) {
+        if (!node) return node;
+
+        if (value < node.value) {
+          node.left = this.delete(node.left, value);
+        } else if (value > node.value) {
+          node.right = this.delete(node.right, value);
+        } else {
+          if (!node.left || !node.right) {
+            node = node.left || node.right;
+          } else {
+            const temp = this.minValueNode(node.right);
+            node.value = temp.value;
+            node.right = this.delete(node.right, temp.value);
+          }
+        }
+
+        if (!node) return node;
+
+        node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+        const balance = this.getBalance(node);
+
+        if (balance > 1 && this.getBalance(node.left) >= 0) return this.rotateRight(node);
+        if (balance > 1 && this.getBalance(node.left) < 0) {
+          node.left = this.rotateLeft(node.left);
+          return this.rotateRight(node);
+        }
+        if (balance < -1 && this.getBalance(node.right) <= 0) return this.rotateLeft(node);
+        if (balance < -1 && this.getBalance(node.right) > 0) {
+          node.right = this.rotateRight(node.right);
+          return this.rotateLeft(node);
+        }
+
+        return node;
+      }
+
+      search(node, value) {
+        if (!node || node.value === value) return node;
+        return value < node.value ? this.search(node.left, value) : this.search(node.right, value);
+      }
+
+      generateTreeData(node) {
+        if (!node) return null;
+        return {
+          value: node.value,
+          children: [this.generateTreeData(node.left), this.generateTreeData(node.right)].filter(Boolean)
+        };
+      }
+
+      visualizeTree(root, highlight = null) {
+        const svg = d3.select("#tree-container");
+        svg.selectAll("*").remove();
+
+        const treeData = this.generateTreeData(root);
+        if (!treeData) return;
+
+        const margin = 40, width = 900 - margin * 2, height = 500 - margin * 2;
+        const treeLayout = d3.tree().size([width, height]);
+        const rootNode = d3.hierarchy(treeData);
+        treeLayout(rootNode);
+
+        // Draw links
+        svg.selectAll(".link")
+          .data(rootNode.links())
+          .enter()
+          .append("line")
+          .attr("class", "link")
+          .attr("x1", d => d.source.x + margin)
+          .attr("y1", d => d.source.y + margin)
+          .attr("x2", d => d.source.x + margin)
+          .attr("y2", d => d.source.y + margin)
+          .transition()
+          .duration(500)
+          .attr("x2", d => d.target.x + margin)
+          .attr("y2", d => d.target.y + margin)
+          .attr("stroke", "#aaa")
+          .attr("stroke-width", 2);
+
+        const nodeGroup = svg.selectAll(".node")
+          .data(rootNode.descendants())
+          .enter()
+          .append("g")
+          .attr("transform", d => `translate(${d.x + margin},${d.y + margin})`);
+
+        nodeGroup.append("circle")
+          .attr("r", 0)
+          .transition()
+          .duration(400)
+          .attr("r", 20)
+          .attr("fill", d => d.data.value === highlight ? "#f44336" : "#2196f3")
+          .attr("stroke", "#fff")
+          .attr("stroke-width", 2);
+
+        nodeGroup.append("text")
+          .attr("dy", 5)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#fff")
+          .text(d => d.data.value);
+      }
+    }
+
+    const tree = new AVLTree();
+
+    function insertNode() {
+      const val = parseInt(document.getElementById("value-input").value);
+      if (!isNaN(val)) {
+        tree.root = tree.insert(tree.root, val);
+        tree.visualizeTree(tree.root);
+        document.getElementById("search-result").innerText = "";
+      }
+    }
+
+    function deleteNode() {
+      const val = parseInt(document.getElementById("value-input").value);
+      if (!isNaN(val)) {
+        tree.root = tree.delete(tree.root, val);
+        tree.visualizeTree(tree.root);
+        document.getElementById("search-result").innerText = "";
+      }
+    }
+
+    function searchNode() {
+      const val = parseInt(document.getElementById("value-input").value);
+      const node = tree.search(tree.root, val);
+      const msg = node ? `Value ${val} found.` : `Value ${val} not found.`;
+      document.getElementById("search-result").innerText = msg;
+      tree.visualizeTree(tree.root, val);
+    }
+  </script>
+</body>
+</html>
