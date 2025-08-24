@@ -12,7 +12,3 @@ Allows insertion, deletion, and searching in real time.
 1. Clone or download this repo.
 2. Open `index.html` in your browser.
 3. Use the input box to insert, delete, or search a value in the AVL tree.
-
-## Author
-Made with ❤️ by [AKSHAYA MANCHALA]
-# AVL_TREE_VISUALIZER
